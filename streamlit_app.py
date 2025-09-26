@@ -22,6 +22,7 @@ import os
 import sys
 import zipfile
 import re
+import importlib.util
 
 # Make PWD-Tools importable
 PWD_TOOLS_DIR = os.path.join(os.path.dirname(__file__), 'PWD-Tools')
@@ -32,6 +33,24 @@ try:
     from utils.branding import apply_custom_css  # from PWD-Tools
 except Exception:
     apply_custom_css = None
+
+# Load Genspark2 branding (for landing page look/colors/buttons)
+GENSPARK2_DIR = os.path.join(os.path.dirname(__file__), 'PWD-Tools-Genspark2')
+gs_apply_custom_css = None
+gs_show_header = None
+gs_show_credits = None
+try:
+    gs_branding_path = os.path.join(GENSPARK2_DIR, 'utils', 'branding.py')
+    if os.path.isfile(gs_branding_path):
+        spec = importlib.util.spec_from_file_location('genspark2_branding', gs_branding_path)
+        gs_branding = importlib.util.module_from_spec(spec)
+        assert spec and spec.loader
+        spec.loader.exec_module(gs_branding)
+        gs_apply_custom_css = getattr(gs_branding, 'apply_custom_css', None)
+        gs_show_header = getattr(gs_branding, 'show_header', None)
+        gs_show_credits = getattr(gs_branding, 'show_credits', None)
+except Exception:
+    pass
 
 # Page configuration
 st.set_page_config(
@@ -105,7 +124,10 @@ def generate_pdf(data):
     return buffer
 
 def main():
-    # Apply PWD-Tools branding if available
+    # Apply Genspark2 branding first for landing page look/colors/buttons
+    if callable(gs_apply_custom_css):
+        gs_apply_custom_css()
+    # Apply PWD-Tools branding if available (kept for broader theming)
     if callable(apply_custom_css):
         apply_custom_css()
     st.markdown('<div class="main-header">🏛️ PWD Tools - Simplified</div>', unsafe_allow_html=True)
@@ -169,7 +191,27 @@ def render_pwd_static_html(html_filename: str, height: int = 800, width: int = 1
         return False
 
 def show_dashboard():
-    st.header("Dashboard")
+    # Use Genspark2 header block for landing page look
+    if callable(gs_show_header):
+        gs_show_header()
+    else:
+        st.header("Dashboard")
+
+    # Welcome section styled like Genspark2 landing page
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f0f8f5 0%, #e8f5e8 100%); border-radius: 15px; margin-bottom: 25px;">
+            <h2 style="color: #2E8B57; margin-bottom: 10px;">🎯 PWD Tools Hub</h2>
+            <p style="font-size: 1.1rem; color: #333; max-width: 800px; margin: 0 auto;">
+                <strong>Infrastructure Management Tools</strong> - Simple, efficient tools for PWD operations
+            </p>
+            <p style="font-size: 1rem; color: #666; max-width: 800px; margin: 15px auto 0;">
+                Streamline your workflow with our suite of engineering and financial tools
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("Bills", db.execute("SELECT COUNT(*) FROM bills").fetchone()[0])
     with col2: st.metric("EMD", db.execute("SELECT COUNT(*) FROM emd_refunds").fetchone()[0])
