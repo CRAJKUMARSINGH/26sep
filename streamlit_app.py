@@ -144,7 +144,7 @@ def main():
         "📈 Bill Deviation"
     ])
 
-    # No override selection; style-only from Genspark2 is applied globally
+    # Style-only; no tool grid
 
     # Route to simplified tools
     if selected_tool == "🏠 Dashboard":
@@ -168,12 +168,9 @@ def main():
     elif selected_tool == "📈 Bill Deviation":
         show_bill_deviation()
 
-    # Footer styled like Genspark2 credits
+    # Footer (style-only)
     st.markdown("---")
-    if callable(gs_show_credits):
-        gs_show_credits()
-    else:
-        st.markdown('<div class="footer">PWD Tools Simplified v1.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">PWD Tools Simplified v1.0</div>', unsafe_allow_html=True)
 
 def render_pwd_static_html(html_filename: str, height: int = 800, width: int = 1200):
     """Render a static HTML tool from PWD-Tools/static/html with graceful fallback."""
@@ -206,85 +203,12 @@ def tool_header(title: str, subtitle: str = ""):
     )
 
 def show_dashboard():
-    # Use Genspark2 header block for landing page look
-    if callable(gs_show_header):
-        gs_show_header()
-    else:
-        st.header("Dashboard")
-
-    # Welcome section styled like Genspark2 landing page
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f0f8f5 0%, #e8f5e8 100%); border-radius: 15px; margin-bottom: 25px;">
-            <h2 style="color: #2E8B57; margin-bottom: 10px;">🎯 PWD Tools Hub</h2>
-            <p style="font-size: 1.1rem; color: #333; max-width: 800px; margin: 0 auto;">
-                <strong>Infrastructure Management Tools</strong> - Simple, efficient tools for PWD operations
-            </p>
-            <p style="font-size: 1rem; color: #666; max-width: 800px; margin: 15px auto 0;">
-                Streamline your workflow with our suite of engineering and financial tools
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.header("Dashboard")
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("Bills", db.execute("SELECT COUNT(*) FROM bills").fetchone()[0])
     with col2: st.metric("EMD", db.execute("SELECT COUNT(*) FROM emd_refunds").fetchone()[0])
     with col3: st.metric("Delays", db.execute("SELECT COUNT(*) FROM project_delays").fetchone()[0])
-
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #2E8B57;">🔧 Available Tools</h2>
-            <p style="color: #666; font-size: 1.05rem;">Select any tool below to get started</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Styled tool cards grid (3 columns)
-    cards = [
-        {"name": "📊 Excel EMD", "desc": "Excel to RPWA 28 receipts", "key": "Excel EMD"},
-        {"name": "📋 Bill Note", "desc": "Generate Bill Note PDFs", "key": "Bill Note"},
-        {"name": "💰 EMD Refund", "desc": "Refund calc & receipts", "key": "EMD Refund"},
-        {"name": "🔒 Security Refund", "desc": "Security deposit checks", "key": "Security Refund"},
-        {"name": "📊 Financial Progress", "desc": "Track project finance", "key": "Financial Progress"},
-        {"name": "⏰ Delay Calc", "desc": "Delay & penalty calc", "key": "Delay Calc"},
-        {"name": "🏛️ Stamp Duty", "desc": "Stamp duty calculator", "key": "Stamp Duty"},
-        {"name": "📊 Deductions", "desc": "Net payable after deductions", "key": "Deductions"},
-        {"name": "📈 Bill Deviation", "desc": "Deviation calculator", "key": "Bill Deviation"},
-    ]
-
-    cols = st.columns(3)
-    for i, card in enumerate(cards):
-        with cols[i % 3]:
-            st.markdown(
-                f"""
-                <div class=\"pwd-card\" style=\"margin-bottom: 16px;\">
-                    <div style=\"text-align:center; font-size: 26px;\">{card['name'].split(' ',1)[0]}</div>
-                    <div style=\"text-align:center; font-weight: 800; color: var(--primary-green);\">{card['name']}</div>
-                    <div style=\"text-align:center; color: #666; font-size: 13px; margin: 6px 0 10px;\">{card['desc']}</div>
-                    <div style=\"text-align:center;\"><a class=\"btn-link\" href=\"#\" onclick=\"window.parent.postMessage('{{"select":"{card['key']}"}}','*'); return false;\">Open Tool</a></div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    # Handle card button selection via session state fallback
-    # Provide native buttons as well (for environments without JS)
-    st.markdown("<div style='display:none'></div>", unsafe_allow_html=True)
-    colb1, colb2, colb3 = st.columns(3)
-    with colb1:
-        if st.button("Open Excel EMD", use_container_width=True):
-            st.session_state["selected_tool_override"] = "📊 Excel EMD"
-    with colb2:
-        if st.button("Open Bill Note", use_container_width=True):
-            st.session_state["selected_tool_override"] = "📋 Bill Note"
-    with colb3:
-        if st.button("Open EMD Refund", use_container_width=True):
-            st.session_state["selected_tool_override"] = "💰 EMD Refund"
-
+    # Style-only; no tool grid
 
 def show_excel_emd():
     tool_header("📊 Excel se EMD", "Excel to RPWA 28 hand receipts")
