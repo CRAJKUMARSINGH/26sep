@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-PWD Tools Web Application
-A comprehensive web-based application for PWD tools and utilities
-Developed for PWD Udaipur under the initiative of Mrs. Premlata Jain, AAO
-Streamlit Version for Web Deployment
-“””
+#PWD Tools Web Application
+#A comprehensive web-based application for PWD tools and utilities
+#Developed for PWD Udaipur under the initiative of Mrs. Premlata Jain, AAO
+#Streamlit Version for Web Deploymen
 
 import streamlit as st
 import pandas as pd
