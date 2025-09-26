@@ -148,6 +148,10 @@ def main():
         "📈 Bill Deviation"
     ])
 
+    # Allow dashboard card clicks to override selection (from native buttons)
+    if "selected_tool_override" in st.session_state:
+        selected_tool = st.session_state.pop("selected_tool_override")
+
     # Route to simplified tools
     if selected_tool == "🏠 Dashboard":
         show_dashboard()
@@ -190,6 +194,18 @@ def render_pwd_static_html(html_filename: str, height: int = 800, width: int = 1
         st.info("Official PWD-Tools static HTML not found. Showing simplified fallback.")
         return False
 
+def tool_header(title: str, subtitle: str = ""):
+    """Reusable tool header styled like Genspark2."""
+    st.markdown(
+        f"""
+        <div class=\"pwd-welcome\" style=\"margin-bottom: 16px;\"> 
+            <h2 style=\"color: #2E8B57; margin-bottom: 6px;\">{title}</h2>
+            {f'<p style=\"color:#555;\">{subtitle}</p>' if subtitle else ''}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def show_dashboard():
     # Use Genspark2 header block for landing page look
     if callable(gs_show_header):
@@ -217,8 +233,62 @@ def show_dashboard():
     with col2: st.metric("EMD", db.execute("SELECT COUNT(*) FROM emd_refunds").fetchone()[0])
     with col3: st.metric("Delays", db.execute("SELECT COUNT(*) FROM project_delays").fetchone()[0])
 
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #2E8B57;">🔧 Available Tools</h2>
+            <p style="color: #666; font-size: 1.05rem;">Select any tool below to get started</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Styled tool cards grid (3 columns)
+    cards = [
+        {"name": "📊 Excel EMD", "desc": "Excel to RPWA 28 receipts", "key": "Excel EMD"},
+        {"name": "📋 Bill Note", "desc": "Generate Bill Note PDFs", "key": "Bill Note"},
+        {"name": "💰 EMD Refund", "desc": "Refund calc & receipts", "key": "EMD Refund"},
+        {"name": "🔒 Security Refund", "desc": "Security deposit checks", "key": "Security Refund"},
+        {"name": "📊 Financial Progress", "desc": "Track project finance", "key": "Financial Progress"},
+        {"name": "⏰ Delay Calc", "desc": "Delay & penalty calc", "key": "Delay Calc"},
+        {"name": "🏛️ Stamp Duty", "desc": "Stamp duty calculator", "key": "Stamp Duty"},
+        {"name": "📊 Deductions", "desc": "Net payable after deductions", "key": "Deductions"},
+        {"name": "📈 Bill Deviation", "desc": "Deviation calculator", "key": "Bill Deviation"},
+    ]
+
+    cols = st.columns(3)
+    for i, card in enumerate(cards):
+        with cols[i % 3]:
+            st.markdown(
+                f"""
+                <div class=\"pwd-card\" style=\"margin-bottom: 16px;\">
+                    <div style=\"text-align:center; font-size: 26px;\">{card['name'].split(' ',1)[0]}</div>
+                    <div style=\"text-align:center; font-weight: 800; color: var(--primary-green);\">{card['name']}</div>
+                    <div style=\"text-align:center; color: #666; font-size: 13px; margin: 6px 0 10px;\">{card['desc']}</div>
+                    <div style=\"text-align:center;\"><a class=\"btn-link\" href=\"#\" onclick=\"window.parent.postMessage('{{"select":"{card['key']}"}}','*'); return false;\">Open Tool</a></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # Handle card button selection via session state fallback
+    # Provide native buttons as well (for environments without JS)
+    st.markdown("<div style='display:none'></div>", unsafe_allow_html=True)
+    colb1, colb2, colb3 = st.columns(3)
+    with colb1:
+        if st.button("Open Excel EMD", use_container_width=True):
+            st.session_state["selected_tool_override"] = "📊 Excel EMD"
+    with colb2:
+        if st.button("Open Bill Note", use_container_width=True):
+            st.session_state["selected_tool_override"] = "📋 Bill Note"
+    with colb3:
+        if st.button("Open EMD Refund", use_container_width=True):
+            st.session_state["selected_tool_override"] = "💰 EMD Refund"
+
+
 def show_excel_emd():
-    st.header("Excel se EMD - Full Module")
+    tool_header("📊 Excel se EMD", "Excel to RPWA 28 hand receipts")
     st.info("Upload an Excel (.xlsx) or CSV, map columns, and download RPWA 28 hand receipts as HTML or ZIP.")
 
     # Helpers (scoped to this tool)
@@ -519,7 +589,7 @@ def show_excel_emd():
         )
 
 def show_bill_note():
-    st.header("Bill Note")
+    tool_header("📝 Bill Note", "Generate and download bill note PDFs")
     with st.form("bill"):
         payee = st.text_input("Payee Name")
         amount = st.number_input("Amount", step=1000.0)
@@ -533,7 +603,7 @@ def show_bill_note():
                 st.success("Saved!")
 
 def show_emd_refund():
-    st.header("EMD Refund")
+    tool_header("💰 EMD Refund", "Refund calculation and receipts")
     # Prefer official tool if available
     if not render_pwd_static_html('EmdRefund.html', height=600, width=1200):
         with st.form("emd"):
@@ -547,7 +617,7 @@ def show_emd_refund():
                     st.metric("Refund", f"₹{amount:,.2f}")
 
 def show_security_refund():
-    st.header("Security Refund")
+    tool_header("🔒 Security Refund", "Eligibility and calculations")
     if not render_pwd_static_html('SecurityRefund.html', height=800, width=1200):
         with st.form("sec"):
             payee = st.text_input("Payee Name")
@@ -558,7 +628,7 @@ def show_security_refund():
                     st.success("Eligible")
 
 def show_financial_progress():
-    st.header("Financial Progress")
+    tool_header("📈 Financial Progress", "Track project financials")
     if not render_pwd_static_html('FinancialProgressTracker.html', height=800, width=1200):
         with st.form("progress"):
             payee = st.text_input("Payee Name")
@@ -569,7 +639,7 @@ def show_financial_progress():
                     st.metric("Progress", "100%")
 
 def show_delay_calc():
-    st.header("Delay Calculator")
+    tool_header("⏰ Delay Calculator", "Delay days and penalty")
     with st.form("delay"):
         payee = st.text_input("Payee Name")
         amount = st.number_input("Amount", step=10000.0)
@@ -580,7 +650,7 @@ def show_delay_calc():
                 st.metric("Penalty", "₹0.00")
 
 def show_stamp_duty():
-    st.header("Stamp Duty")
+    tool_header("🏛️ Stamp Duty", "Document stamp duty calculator")
     if not render_pwd_static_html('StampDuty.html', height=600, width=1200):
         with st.form("stamp"):
             payee = st.text_input("Payee Name")
@@ -591,7 +661,7 @@ def show_stamp_duty():
                 st.metric("Duty", f"₹{duty:,.2f}")
 
 def show_deductions():
-    st.header("Deductions")
+    tool_header("📊 Deductions", "Net payable after deductions")
     if not render_pwd_static_html('DeductionsTable.html', height=800, width=1200):
         with st.form("ded"):
             payee = st.text_input("Payee Name")
@@ -602,7 +672,7 @@ def show_deductions():
                 st.metric("Net", f"₹{net:,.2f}")
 
 def show_bill_deviation():
-    st.header("Bill Deviation")
+    tool_header("📈 Bill Deviation", "Deviation calculator")
     # Use official Bill Note static page if present as a related reference
     showed = render_pwd_static_html('BillNoteSheet.html', height=800, width=1200)
     with st.form("dev"):
