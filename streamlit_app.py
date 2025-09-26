@@ -34,11 +34,9 @@ try:
 except Exception:
     apply_custom_css = None
 
-# Load Genspark2 branding (for landing page look/colors/buttons)
+# Load Genspark2 branding (style-only)
 GENSPARK2_DIR = os.path.join(os.path.dirname(__file__), 'PWD-Tools-Genspark2')
 gs_apply_custom_css = None
-gs_show_header = None
-gs_show_credits = None
 try:
     gs_branding_path = os.path.join(GENSPARK2_DIR, 'utils', 'branding.py')
     if os.path.isfile(gs_branding_path):
@@ -47,8 +45,6 @@ try:
         assert spec and spec.loader
         spec.loader.exec_module(gs_branding)
         gs_apply_custom_css = getattr(gs_branding, 'apply_custom_css', None)
-        gs_show_header = getattr(gs_branding, 'show_header', None)
-        gs_show_credits = getattr(gs_branding, 'show_credits', None)
 except Exception:
     pass
 
@@ -148,9 +144,7 @@ def main():
         "📈 Bill Deviation"
     ])
 
-    # Allow dashboard card clicks to override selection (from native buttons)
-    if "selected_tool_override" in st.session_state:
-        selected_tool = st.session_state.pop("selected_tool_override")
+    # No override selection; style-only from Genspark2 is applied globally
 
     # Route to simplified tools
     if selected_tool == "🏠 Dashboard":
