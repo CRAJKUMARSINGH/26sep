@@ -567,19 +567,55 @@ def show_financial_progress():
     tool_header("📈 Financial Progress", "Track budget, expenditure, and balance")
     if not render_pwd_static_html('FinancialProgressTracker.html', height=800, width=1200):
         with st.form("progress"):
-            total_budget = st.number_input("Total Budget (₹)", min_value=0.0, step=10000.0, format="%.2f")
-            expenditure = st.number_input("Expenditure to Date (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            work_order_amount = st.number_input("Work Order Amount (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            start_date = st.date_input("Project Start Date")
+            end_date = st.date_input("Project Completion Date")
+            review_date = st.date_input("Review Date")
+            actual_progress_inr = st.number_input("Actual Progress (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            scheme = st.selectbox("Penalty Scheme", ["Standard PWF&AR", "Custom (linear)"])
             submitted = st.form_submit_button("Calculate")
             if submitted:
-                balance = max(0.0, total_budget - expenditure)
-                progress = 0.0
-                if total_budget > 0:
-                    progress = min(100.0, (expenditure / total_budget) * 100.0)
+                total_days = (end_date - start_date).days if end_date > start_date else 0
+                elapsed = (review_date - start_date).days if review_date > start_date else 0
+                elapsed = min(max(elapsed, 0), total_days or 1)
+                percent_time = (elapsed / (total_days or 1))
+                if scheme == "Standard PWF&AR":
+                    if elapsed <= total_days * 0.25:
+                        required = work_order_amount * 0.125
+                        penalty_rate = 0.025
+                    elif elapsed <= total_days * 0.50:
+                        required = work_order_amount * 0.375
+                        penalty_rate = 0.05
+                    elif elapsed <= total_days * 0.75:
+                        required = work_order_amount * 0.75
+                        penalty_rate = 0.075
+                    else:
+                        required = work_order_amount
+                        penalty_rate = 0.10
+                else:
+                    required = work_order_amount * percent_time
+                    lag_pct = (required - actual_progress_inr) / required if required > 0 else 0
+                    if lag_pct <= 0:
+                        penalty_rate = 0
+                    elif lag_pct <= 0.25:
+                        penalty_rate = 0.025
+                    elif lag_pct <= 0.50:
+                        penalty_rate = 0.05
+                    elif lag_pct <= 0.75:
+                        penalty_rate = 0.075
+                    else:
+                        penalty_rate = 0.10
+
+                unexecuted = max(0.0, required - actual_progress_inr)
+                penalty = penalty_rate * unexecuted
+                time_pct = percent_time * 100.0
+                fin_progress_pct = (actual_progress_inr / required) * 100.0 if required > 0 else 0.0
                 col1, col2, col3 = st.columns(3)
-                with col1: st.metric("Budget", f"₹{total_budget:,.2f}")
-                with col2: st.metric("Expenditure", f"₹{expenditure:,.2f}")
-                with col3: st.metric("Balance", f"₹{balance:,.2f}")
-                st.metric("Progress", f"{progress:.2f}%")
+                with col1: st.metric("Required Progress", f"₹{required:,.0f}")
+                with col2: st.metric("Unexecuted Work", f"₹{unexecuted:,.0f}")
+                with col3: st.metric("Penalty", f"₹{penalty:,.0f}")
+                st.metric("Time Elapsed", f"{time_pct:.1f}%")
+                st.metric("Financial Progress", f"{min(max(fin_progress_pct,0),100):.1f}%")
 
 def show_delay_calc():
     tool_header("⏰ Delay Calculator", "Compute delay days and penalty amount")
@@ -598,32 +634,43 @@ def show_stamp_duty():
     tool_header("🏛️ Stamp Duty", "Document stamp duty calculator")
     if not render_pwd_static_html('StampDuty.html', height=600, width=1200):
         with st.form("stamp"):
-            payee = st.text_input("Payee Name")
-            amount = st.number_input("Amount", step=1000.0)
-            work = st.text_input("Work")
-            if st.form_submit_button("Calculate"):
-                duty = amount * 0.005
-                st.metric("Duty", f"₹{duty:,.2f}")
+            amount = st.number_input("Work Order Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+            submitted = st.form_submit_button("Calculate")
+            if submitted:
+                if amount <= 5000000:
+                    duty = 1000
+                else:
+                    duty = round(amount * 0.0015)
+                    if duty > 2500000:
+                        duty = 2500000
+                st.metric("Stamp Duty", f"₹{duty:,.0f}")
 
 def show_deductions():
     tool_header("📊 Deductions", "Compute deductions and net payable")
     if not render_pwd_static_html('DeductionsTable.html', height=800, width=1200):
+        def round_to_even(n: float) -> int:
+            nearest = int(round(n))
+            return nearest if nearest % 2 == 0 else nearest + 1
+
         with st.form("ded"):
-            gross_amount = st.number_input("Gross Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
-            tds_rate = st.number_input("Income Tax (TDS) %", min_value=0.0, max_value=100.0, value=2.0, step=0.1)
-            security_rate = st.number_input("Security Deposit %", min_value=0.0, max_value=100.0, value=5.0, step=0.1)
-            other_deductions = st.number_input("Other Deductions (₹)", min_value=0.0, step=100.0, format="%.2f")
-            submitted = st.form_submit_button("Calculate")
+            amount = st.number_input("Bill Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+            dep_v = st.number_input("Dep-V Amount (₹)", min_value=0.0, step=100.0, format="%.2f")
+            submitted = st.form_submit_button("Generate Table")
             if submitted:
-                tds = gross_amount * (tds_rate / 100.0)
-                security = gross_amount * (security_rate / 100.0)
-                total_deductions = tds + security + other_deductions
-                net = max(0.0, gross_amount - total_deductions)
-                colx, coly, colz, coln = st.columns(4)
-                with colx: st.metric("TDS", f"₹{tds:,.2f}")
-                with coly: st.metric("Security", f"₹{security:,.2f}")
-                with colz: st.metric("Other", f"₹{other_deductions:,.2f}")
-                with coln: st.metric("Net Payable", f"₹{net:,.2f}")
+                sd = round(amount * 10 / 100)
+                it = round(amount * 2 / 100)
+                gst = round_to_even(amount * 2 / 100)
+                lc = round(amount * 1 / 100)
+                dv = int(round(dep_v))
+                total_ded = sd + it + gst + lc + dv
+                cheque_amount = round(amount) - total_ded
+                col1, col2, col3, col4, col5 = st.columns(5)
+                with col1: st.metric("SD (10%)", f"₹{sd:,.0f}")
+                with col2: st.metric("IT (2%)", f"₹{it:,.0f}")
+                with col3: st.metric("GST (2%)", f"₹{gst:,.0f}")
+                with col4: st.metric("LC (1%)", f"₹{lc:,.0f}")
+                with col5: st.metric("Dep-V", f"₹{dv:,.0f}")
+                st.metric("Cheque Amount", f"₹{cheque_amount:,.0f}")
 
 def show_bill_deviation():
     tool_header("📈 Bill Deviation", "Compute deviation between original and revised amounts")
