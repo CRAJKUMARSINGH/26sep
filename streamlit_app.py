@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-
-#PWD Tools Web Application
-#A comprehensive web-based application for PWD tools and utilities
-#Developed for PWD Udaipur under the initiative of Mrs. Premlata Jain, AAO
-#Streamlit Version for Web Deploymen
+"""
+PWD Tools Web Application
+A comprehensive web-based application for PWD tools and utilities
+Developed for PWD Udaipur under the initiative of Mrs. Premlata Jain, AAO
+Streamlit Version for Web Deployment
+"""
 
 import streamlit as st
 import pandas as pd
@@ -23,12 +24,16 @@ import plotly.graph_objects as go
 
 # Page configuration
 
-st.set_page_config( page_title= "PWD Tools Suite”, page_icon=“🏛️”, layout=“wide”, initial_sidebar_state=“expanded”)
+st.set_page_config(
+    page_title="PWD Tools Suite",
+    page_icon="🏛️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # Custom CSS
 
-st.markdown(”””
-
+st.markdown("""
 <style>
     .main-header {
         text-align: center;
@@ -67,584 +72,561 @@ st.markdown(”””
         color: #666;
     }
 </style>
-
-“””, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # Initialize database
 
 @st.cache_resource
 def init_database():
-conn = sqlite3.connect(‘pwd_tools.db’, check_same_thread=False)
-conn.row_factory = sqlite3.Row
+    conn = sqlite3.connect('pwd_tools.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
 
-```
-# Create tables
-conn.execute('''
-    CREATE TABLE IF NOT EXISTS bills (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bill_number TEXT NOT NULL,
-        contractor_name TEXT NOT NULL,
-        work_description TEXT NOT NULL,
-        bill_amount REAL NOT NULL,
-        created_date TEXT NOT NULL,
-        status TEXT DEFAULT 'Active'
-    )
-''')
+    # Create tables
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS bills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bill_number TEXT NOT NULL,
+            contractor_name TEXT NOT NULL,
+            work_description TEXT NOT NULL,
+            bill_amount REAL NOT NULL,
+            created_date TEXT NOT NULL,
+            status TEXT DEFAULT 'Active'
+        )
+    ''')
 
-conn.execute('''
-    CREATE TABLE IF NOT EXISTS emd_refunds (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tender_number TEXT NOT NULL,
-        contractor_name TEXT NOT NULL,
-        emd_amount REAL NOT NULL,
-        validity_date TEXT NOT NULL,
-        refund_amount REAL,
-        penalty_amount REAL DEFAULT 0,
-        status TEXT DEFAULT 'Pending',
-        created_date TEXT NOT NULL
-    )
-''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS emd_refunds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tender_number TEXT NOT NULL,
+            contractor_name TEXT NOT NULL,
+            emd_amount REAL NOT NULL,
+            validity_date TEXT NOT NULL,
+            refund_amount REAL,
+            penalty_amount REAL DEFAULT 0,
+            status TEXT DEFAULT 'Pending',
+            created_date TEXT NOT NULL
+        )
+    ''')
 
-conn.execute('''
-    CREATE TABLE IF NOT EXISTS security_refunds (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        work_name TEXT NOT NULL,
-        contractor_name TEXT NOT NULL,
-        security_amount REAL NOT NULL,
-        completion_date TEXT NOT NULL,
-        refund_eligible_date TEXT NOT NULL,
-        status TEXT DEFAULT 'Pending',
-        created_date TEXT NOT NULL
-    )
-''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS security_refunds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            work_name TEXT NOT NULL,
+            contractor_name TEXT NOT NULL,
+            security_amount REAL NOT NULL,
+            completion_date TEXT NOT NULL,
+            refund_eligible_date TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending',
+            created_date TEXT NOT NULL
+        )
+    ''')
 
-conn.execute('''
-    CREATE TABLE IF NOT EXISTS project_delays (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_name TEXT NOT NULL,
-        contractor_name TEXT NOT NULL,
-        start_date TEXT NOT NULL,
-        scheduled_end_date TEXT NOT NULL,
-        actual_end_date TEXT,
-        delay_days INTEGER DEFAULT 0,
-        penalty_amount REAL DEFAULT 0,
-        created_date TEXT NOT NULL
-    )
-''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS project_delays (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_name TEXT NOT NULL,
+            contractor_name TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            scheduled_end_date TEXT NOT NULL,
+            actual_end_date TEXT,
+            delay_days INTEGER DEFAULT 0,
+            penalty_amount REAL DEFAULT 0,
+            created_date TEXT NOT NULL
+        )
+    ''')
 
-conn.commit()
-return conn
-```
+    conn.commit()
+    return conn
 
 # Initialize
 
 db = init_database()
 
 def generate_bill_pdf(bill_data):
-“”“Generate PDF for bill”””
-buffer = io.BytesIO()
-doc = SimpleDocTemplate(buffer, pagesize=A4)
-story = []
-styles = getSampleStyleSheet()
+    """Generate PDF for bill"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    story = []
+    styles = getSampleStyleSheet()
 
-```
-title = Paragraph("PWD BILL NOTE SHEET", styles['Title'])
-story.append(title)
-story.append(Spacer(1, 12))
+    title = Paragraph("PWD BILL NOTE SHEET", styles['Title'])
+    story.append(title)
+    story.append(Spacer(1, 12))
 
-data = [
-    ["Bill Number:", bill_data['bill_number']],
-    ["Contractor Name:", bill_data['contractor_name']],
-    ["Work Description:", bill_data['work_description']],
-    ["Bill Amount:", f"₹ {bill_data['bill_amount']:,.2f}"],
-    ["Generated Date:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
-]
+    data = [
+        ["Bill Number:", bill_data['bill_number']],
+        ["Contractor Name:", bill_data['contractor_name']],
+        ["Work Description:", bill_data['work_description']],
+        ["Bill Amount:", f"₹ {bill_data['bill_amount']:,.2f}"],
+        ["Generated Date:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+    ]
 
-table = Table(data, colWidths=[2*inch, 4*inch])
-table.setStyle(TableStyle([
-    ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-    ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-    ('FONTSIZE', (0, 0), (-1, -1), 12),
-    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-    ('BACKGROUND', (0, 0), (0, -1), colors.grey),
-    ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
-]))
+    table = Table(data, colWidths=[2*inch, 4*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+    ]))
 
-story.append(table)
-story.append(Spacer(1, 20))
+    story.append(table)
+    story.append(Spacer(1, 20))
 
-footer = Paragraph("Generated by PWD Tools Web - Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur", styles['Normal'])
-story.append(footer)
+    footer = Paragraph("Generated by PWD Tools Web - Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur", styles['Normal'])
+    story.append(footer)
 
-doc.build(story)
-buffer.seek(0)
-return buffer
-```
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 def main():
-# Header
-st.markdown(’<div class="main-header">🏛️ PWD Tools Web Suite</div>’, unsafe_allow_html=True)
-st.markdown(’<div class="sub-header">Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur</div>’, unsafe_allow_html=True)
+    # Header
+    st.markdown('<div class="main-header">🏛️ PWD Tools Web Suite</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur</div>', unsafe_allow_html=True)
 
-```
-# Sidebar
-st.sidebar.title("🔧 PWD Tools")
-st.sidebar.markdown("---")
+    # Sidebar
+    st.sidebar.title("🔧 PWD Tools")
+    st.sidebar.markdown("---")
 
-selected_tool = st.sidebar.selectbox(
-    "Select Tool:",
-    [
-        "🏠 Dashboard",
-        "📊 Excel EMD Processor", 
-        "📋 Bill Note Sheet",
-        "💰 EMD Refund Calculator",
-        "🔒 Security Refund Tool",
-        "⏰ Delay Calculator",
-        "📊 Deductions Calculator",
-        "📈 Reports & Analytics"
-    ]
-)
+    selected_tool = st.sidebar.selectbox(
+        "Select Tool:",
+        [
+            "🏠 Dashboard",
+            "📊 Excel EMD Processor", 
+            "📋 Bill Note Sheet",
+            "💰 EMD Refund Calculator",
+            "🔒 Security Refund Tool",
+            "⏰ Delay Calculator",
+            "📊 Deductions Calculator",
+            "📈 Reports & Analytics"
+        ]
+    )
 
-# Route to tools
-if selected_tool == "🏠 Dashboard":
-    show_dashboard()
-elif selected_tool == "📊 Excel EMD Processor":
-    show_excel_emd_tool()
-elif selected_tool == "📋 Bill Note Sheet":
-    show_bill_note_tool()
-elif selected_tool == "💰 EMD Refund Calculator":
-    show_emd_refund_tool()
-elif selected_tool == "🔒 Security Refund Tool":
-    show_security_refund_tool()
-elif selected_tool == "⏰ Delay Calculator":
-    show_delay_calculator_tool()
-elif selected_tool == "📊 Deductions Calculator":
-    show_deductions_tool()
-elif selected_tool == "📈 Reports & Analytics":
-    show_reports_tool()
+    # Route to tools
+    if selected_tool == "🏠 Dashboard":
+        show_dashboard()
+    elif selected_tool == "📊 Excel EMD Processor":
+        show_excel_emd_tool()
+    elif selected_tool == "📋 Bill Note Sheet":
+        show_bill_note_tool()
+    elif selected_tool == "💰 EMD Refund Calculator":
+        show_emd_refund_tool()
+    elif selected_tool == "🔒 Security Refund Tool":
+        show_security_refund_tool()
+    elif selected_tool == "⏰ Delay Calculator":
+        show_delay_calculator_tool()
+    elif selected_tool == "📊 Deductions Calculator":
+        show_deductions_tool()
+    elif selected_tool == "📈 Reports & Analytics":
+        show_reports_tool()
 
-# Footer
-st.markdown("---")
-st.markdown('<div class="footer">PWD Tools Web Suite v1.0 | Developed for PWD Udaipur</div>', unsafe_allow_html=True)
-```
+    # Footer
+    st.markdown("---")
+    st.markdown('<div class="footer">PWD Tools Web Suite v1.0 | Developed for PWD Udaipur</div>', unsafe_allow_html=True)
 
 def show_dashboard():
-st.header(“📊 Dashboard Overview”)
+    st.header("📊 Dashboard Overview")
 
-```
-# Get stats
-bills_count = db.execute("SELECT COUNT(*) FROM bills").fetchone()[0]
-bills_total = db.execute("SELECT COALESCE(SUM(bill_amount), 0) FROM bills").fetchone()[0]
-emd_count = db.execute("SELECT COUNT(*) FROM emd_refunds").fetchone()[0]
-emd_total = db.execute("SELECT COALESCE(SUM(refund_amount), 0) FROM emd_refunds").fetchone()[0]
+    # Get stats
+    bills_count = db.execute("SELECT COUNT(*) FROM bills").fetchone()[0]
+    bills_total = db.execute("SELECT COALESCE(SUM(bill_amount), 0) FROM bills").fetchone()[0]
+    emd_count = db.execute("SELECT COUNT(*) FROM emd_refunds").fetchone()[0]
+    emd_total = db.execute("SELECT COALESCE(SUM(refund_amount), 0) FROM emd_refunds").fetchone()[0]
 
-col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    st.metric("📋 Total Bills", bills_count, f"₹{bills_total:,.2f}")
-with col2:
-    st.metric("💰 EMD Refunds", emd_count, f"₹{emd_total:,.2f}")
-with col3:
-    st.metric("🔒 Security Refunds", db.execute("SELECT COUNT(*) FROM security_refunds").fetchone()[0])
-with col4:
-    st.metric("⏰ Project Delays", db.execute("SELECT COUNT(*) FROM project_delays").fetchone()[0])
-```
+    with col1:
+        st.metric("📋 Total Bills", bills_count, f"₹{bills_total:,.2f}")
+    with col2:
+        st.metric("💰 EMD Refunds", emd_count, f"₹{emd_total:,.2f}")
+    with col3:
+        st.metric("🔒 Security Refunds", db.execute("SELECT COUNT(*) FROM security_refunds").fetchone()[0])
+    with col4:
+        st.metric("⏰ Project Delays", db.execute("SELECT COUNT(*) FROM project_delays").fetchone()[0])
 
 def show_excel_emd_tool():
-st.header(“📊 Excel EMD Processor”)
-st.info(“Upload an Excel file to process EMD data”)
+    st.header("📊 Excel EMD Processor")
+    st.info("Upload an Excel file to process EMD data")
 
-```
-uploaded_file = st.file_uploader("Choose Excel file", type=['xlsx', 'xls'])
+    uploaded_file = st.file_uploader("Choose Excel file", type=['xlsx', 'xls'])
 
-if uploaded_file:
-    try:
-        df = pd.read_excel(uploaded_file)
-        st.success(f"✅ File processed! {len(df)} rows, {len(df.columns)} columns")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("📄 File Information")
-            st.write(f"**Filename:** {uploaded_file.name}")
-            st.write(f"**Rows:** {len(df)}")
-            st.write(f"**Columns:** {len(df.columns)}")
-        
-        with col2:
-            st.subheader("📋 Columns")
-            for i, col in enumerate(df.columns, 1):
-                st.write(f"{i}. {col}")
-        
-        st.subheader("👀 Data Preview")
-        st.dataframe(df.head(10), use_container_width=True)
-        
-        csv = df.to_csv(index=False)
-        st.download_button("📥 Download CSV", csv, f"processed_{uploaded_file.name.split('.')[0]}.csv", "text/csv")
-        
-    except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
-```
+    if uploaded_file:
+        try:
+            df = pd.read_excel(uploaded_file)
+            st.success(f"✅ File processed! {len(df)} rows, {len(df.columns)} columns")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("📄 File Information")
+                st.write(f"**Filename:** {uploaded_file.name}")
+                st.write(f"**Rows:** {len(df)}")
+                st.write(f"**Columns:** {len(df.columns)}")
+            
+            with col2:
+                st.subheader("📋 Columns")
+                for i, col in enumerate(df.columns, 1):
+                    st.write(f"{i}. {col}")
+            
+            st.subheader("👀 Data Preview")
+            st.dataframe(df.head(10), use_container_width=True)
+            
+            csv = df.to_csv(index=False)
+            st.download_button("📥 Download CSV", csv, f"processed_{uploaded_file.name.split('.')[0]}.csv", "text/csv")
+            
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
 
 def show_bill_note_tool():
-st.header(“📋 Bill Note Sheet”)
+    st.header("📋 Bill Note Sheet")
 
-```
-with st.form("bill_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        bill_number = st.text_input("Bill Number*")
-        contractor_name = st.text_input("Contractor Name*")
-    
-    with col2:
-        work_description = st.text_area("Work Description*")
-        bill_amount = st.number_input("Bill Amount (₹)*", min_value=0.0, step=1000.0)
-    
-    if st.form_submit_button("💾 Save Bill", use_container_width=True):
-        if all([bill_number, contractor_name, work_description, bill_amount]):
-            try:
-                db.execute('''
-                    INSERT INTO bills (bill_number, contractor_name, work_description, bill_amount, created_date)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (bill_number, contractor_name, work_description, bill_amount, 
-                      datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                db.commit()
-                
-                st.success("✅ Bill saved successfully!")
-                st.balloons()
-                
-                # Generate PDF
-                bill_data = {
-                    'bill_number': bill_number,
-                    'contractor_name': contractor_name,
-                    'work_description': work_description,
-                    'bill_amount': bill_amount
-                }
-                
-                pdf_buffer = generate_bill_pdf(bill_data)
-                st.download_button(
-                    "📄 Download PDF",
-                    pdf_buffer.getvalue(),
-                    f"Bill_{bill_number}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    "application/pdf"
-                )
-                
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-        else:
-            st.error("❌ Please fill all fields.")
+    with st.form("bill_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            bill_number = st.text_input("Bill Number*")
+            contractor_name = st.text_input("Contractor Name*")
+        
+        with col2:
+            work_description = st.text_area("Work Description*")
+            bill_amount = st.number_input("Bill Amount (₹)*", min_value=0.0, step=1000.0)
+        
+        if st.form_submit_button("💾 Save Bill", use_container_width=True):
+            if all([bill_number, contractor_name, work_description, bill_amount]):
+                try:
+                    db.execute('''
+                        INSERT INTO bills (bill_number, contractor_name, work_description, bill_amount, created_date)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (bill_number, contractor_name, work_description, bill_amount, 
+                          datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                    db.commit()
+                    
+                    st.success("✅ Bill saved successfully!")
+                    st.balloons()
+                    
+                    # Generate PDF
+                    bill_data = {
+                        'bill_number': bill_number,
+                        'contractor_name': contractor_name,
+                        'work_description': work_description,
+                        'bill_amount': bill_amount
+                    }
+                    
+                    pdf_buffer = generate_bill_pdf(bill_data)
+                    st.download_button(
+                        "📄 Download PDF",
+                        pdf_buffer.getvalue(),
+                        f"Bill_{bill_number}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        "application/pdf"
+                    )
+                    
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+            else:
+                st.error("❌ Please fill all fields.")
 
-# Show saved bills
-st.subheader("💼 Saved Bills")
-bills_df = pd.read_sql_query("SELECT * FROM bills ORDER BY created_date DESC", db)
+    # Show saved bills
+    st.subheader("💼 Saved Bills")
+    bills_df = pd.read_sql_query("SELECT * FROM bills ORDER BY created_date DESC", db)
 
-if not bills_df.empty:
-    st.dataframe(bills_df, use_container_width=True)
-    csv = bills_df.to_csv(index=False)
-    st.download_button("📥 Download All Bills", csv, f"all_bills_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
-else:
-    st.info("No bills recorded yet.")
-```
+    if not bills_df.empty:
+        st.dataframe(bills_df, use_container_width=True)
+        csv = bills_df.to_csv(index=False)
+        st.download_button("📥 Download All Bills", csv, f"all_bills_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+    else:
+        st.info("No bills recorded yet.")
 
 def show_emd_refund_tool():
-st.header(“💰 EMD Refund Calculator”)
+    st.header("💰 EMD Refund Calculator")
 
-```
-with st.form("emd_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        tender_number = st.text_input("Tender Number*")
-        contractor_name = st.text_input("Contractor Name*")
-    
-    with col2:
-        emd_amount = st.number_input("EMD Amount (₹)*", min_value=0.0, step=1000.0)
-        validity_date = st.date_input("Validity Date*")
-    
-    penalty_rate = st.slider("Penalty Rate (% per day)", 0.1, 2.0, 0.5, 0.1)
-    
-    if st.form_submit_button("🧮 Calculate Refund", use_container_width=True):
-        if all([tender_number, contractor_name, emd_amount, validity_date]):
-            try:
-                current_date = datetime.now().date()
-                
-                if current_date <= validity_date:
-                    refund_amount = emd_amount
-                    penalty_amount = 0
-                    status = "Full Refund Eligible"
-                    days_remaining = (validity_date - current_date).days
-                    st.success(f"✅ EMD valid for {days_remaining} more days. Full refund eligible!")
-                else:
-                    days_expired = (current_date - validity_date).days
-                    penalty_amount = min(emd_amount * (penalty_rate / 100) * days_expired, emd_amount)
-                    refund_amount = max(0, emd_amount - penalty_amount)
-                    status = "Partial Refund (Penalty Applied)"
-                    st.warning(f"⚠️ EMD expired {days_expired} days ago. Penalty applied!")
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("💰 EMD Amount", f"₹{emd_amount:,.2f}")
-                with col2:
-                    st.metric("💸 Penalty", f"₹{penalty_amount:,.2f}")
-                with col3:
-                    st.metric("✅ Refund Amount", f"₹{refund_amount:,.2f}")
-                
-                if st.button("💾 Save Record"):
-                    db.execute('''
-                        INSERT INTO emd_refunds 
-                        (tender_number, contractor_name, emd_amount, validity_date, 
-                         refund_amount, penalty_amount, status, created_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (tender_number, contractor_name, emd_amount, validity_date.strftime('%Y-%m-%d'),
-                          refund_amount, penalty_amount, status, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                    db.commit()
-                    st.success("✅ Record saved!")
+    with st.form("emd_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            tender_number = st.text_input("Tender Number*")
+            contractor_name = st.text_input("Contractor Name*")
+        
+        with col2:
+            emd_amount = st.number_input("EMD Amount (₹)*", min_value=0.0, step=1000.0)
+            validity_date = st.date_input("Validity Date*")
+        
+        penalty_rate = st.slider("Penalty Rate (% per day)", 0.1, 2.0, 0.5, 0.1)
+        
+        if st.form_submit_button("🧮 Calculate Refund", use_container_width=True):
+            if all([tender_number, contractor_name, emd_amount, validity_date]):
+                try:
+                    current_date = datetime.now().date()
                     
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-        else:
-            st.error("❌ Please fill all fields.")
-```
+                    if current_date <= validity_date:
+                        refund_amount = emd_amount
+                        penalty_amount = 0
+                        status = "Full Refund Eligible"
+                        days_remaining = (validity_date - current_date).days
+                        st.success(f"✅ EMD valid for {days_remaining} more days. Full refund eligible!")
+                    else:
+                        days_expired = (current_date - validity_date).days
+                        penalty_amount = min(emd_amount * (penalty_rate / 100) * days_expired, emd_amount)
+                        refund_amount = max(0, emd_amount - penalty_amount)
+                        status = "Partial Refund (Penalty Applied)"
+                        st.warning(f"⚠️ EMD expired {days_expired} days ago. Penalty applied!")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("💰 EMD Amount", f"₹{emd_amount:,.2f}")
+                    with col2:
+                        st.metric("💸 Penalty", f"₹{penalty_amount:,.2f}")
+                    with col3:
+                        st.metric("✅ Refund Amount", f"₹{refund_amount:,.2f}")
+                    
+                    if st.button("💾 Save Record"):
+                        db.execute('''
+                            INSERT INTO emd_refunds 
+                            (tender_number, contractor_name, emd_amount, validity_date, 
+                             refund_amount, penalty_amount, status, created_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (tender_number, contractor_name, emd_amount, validity_date.strftime('%Y-%m-%d'),
+                              refund_amount, penalty_amount, status, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                        db.commit()
+                        st.success("✅ Record saved!")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+            else:
+                st.error("❌ Please fill all fields.")
 
 def show_security_refund_tool():
-st.header(“🔒 Security Refund Tool”)
-st.info(“Calculate security deposit refund eligibility (1 year after completion)”)
+    st.header("🔒 Security Refund Tool")
+    st.info("Calculate security deposit refund eligibility (1 year after completion)")
 
-```
-with st.form("security_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        work_name = st.text_input("Work Name*")
-        contractor_name = st.text_input("Contractor Name*")
-    
-    with col2:
-        security_amount = st.number_input("Security Amount (₹)*", min_value=0.0, step=1000.0)
-        completion_date = st.date_input("Completion Date*")
-    
-    if st.form_submit_button("🔍 Check Eligibility", use_container_width=True):
-        if all([work_name, contractor_name, security_amount, completion_date]):
-            current_date = datetime.now().date()
-            eligible_date = completion_date + timedelta(days=365)
-            
-            if current_date >= eligible_date:
-                st.success(f"✅ Eligible for refund since {eligible_date}!")
-                status = "Eligible"
-            else:
-                days_remaining = (eligible_date - current_date).days
-                st.info(f"⏳ Eligible on {eligible_date} ({days_remaining} days remaining)")
-                status = "Not Eligible Yet"
+    with st.form("security_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            work_name = st.text_input("Work Name*")
+            contractor_name = st.text_input("Contractor Name*")
+        
+        with col2:
+            security_amount = st.number_input("Security Amount (₹)*", min_value=0.0, step=1000.0)
+            completion_date = st.date_input("Completion Date*")
+        
+        if st.form_submit_button("🔍 Check Eligibility", use_container_width=True):
+            if all([work_name, contractor_name, security_amount, completion_date]):
+                current_date = datetime.now().date()
+                eligible_date = completion_date + timedelta(days=365)
                 
-                progress = min((current_date - completion_date).days / 365, 1.0)
-                st.progress(progress, f"Progress: {progress:.1%}")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("💰 Security Amount", f"₹{security_amount:,.2f}")
-            with col2:
-                st.metric("📅 Completion", completion_date.strftime('%Y-%m-%d'))
-            with col3:
-                st.metric("📅 Eligible Date", eligible_date.strftime('%Y-%m-%d'))
-        else:
-            st.error("❌ Please fill all fields.")
-```
+                if current_date >= eligible_date:
+                    st.success(f"✅ Eligible for refund since {eligible_date}!")
+                    status = "Eligible"
+                else:
+                    days_remaining = (eligible_date - current_date).days
+                    st.info(f"⏳ Eligible on {eligible_date} ({days_remaining} days remaining)")
+                    status = "Not Eligible Yet"
+                    
+                    progress = min((current_date - completion_date).days / 365, 1.0)
+                    st.progress(progress, f"Progress: {progress:.1%}")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("💰 Security Amount", f"₹{security_amount:,.2f}")
+                with col2:
+                    st.metric("📅 Completion", completion_date.strftime('%Y-%m-%d'))
+                with col3:
+                    st.metric("📅 Eligible Date", eligible_date.strftime('%Y-%m-%d'))
+            else:
+                st.error("❌ Please fill all fields.")
 
 def show_delay_calculator_tool():
-st.header(“⏰ Delay Calculator”)
+    st.header("⏰ Delay Calculator")
 
-```
-with st.form("delay_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        project_name = st.text_input("Project Name*")
-        contractor_name = st.text_input("Contractor Name*")
-        start_date = st.date_input("Start Date*")
-    
-    with col2:
-        scheduled_end_date = st.date_input("Scheduled End Date*")
-        actual_end_date = st.date_input("Actual End Date")
-        contract_value = st.number_input("Contract Value (₹)*", min_value=0.0, step=10000.0)
-    
-    penalty_rate = st.slider("Penalty Rate (% per day)", 0.1, 1.0, 0.5, 0.1)
-    
-    if st.form_submit_button("🧮 Calculate Delay", use_container_width=True):
-        if all([project_name, contractor_name, start_date, scheduled_end_date, contract_value]):
-            if not actual_end_date:
-                actual_end_date = datetime.now().date()
-            
-            planned_duration = (scheduled_end_date - start_date).days
-            actual_duration = (actual_end_date - start_date).days
-            delay_days = max(0, actual_duration - planned_duration)
-            
-            penalty_amount = min(
-                contract_value * (penalty_rate / 100) * delay_days / 100,
-                contract_value * 0.10
-            )
-            
-            if delay_days > 0:
-                st.warning(f"⚠️ Project delayed by {delay_days} days!")
+    with st.form("delay_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            project_name = st.text_input("Project Name*")
+            contractor_name = st.text_input("Contractor Name*")
+            start_date = st.date_input("Start Date*")
+        
+        with col2:
+            scheduled_end_date = st.date_input("Scheduled End Date*")
+            actual_end_date = st.date_input("Actual End Date")
+            contract_value = st.number_input("Contract Value (₹)*", min_value=0.0, step=10000.0)
+        
+        penalty_rate = st.slider("Penalty Rate (% per day)", 0.1, 1.0, 0.5, 0.1)
+        
+        if st.form_submit_button("🧮 Calculate Delay", use_container_width=True):
+            if all([project_name, contractor_name, start_date, scheduled_end_date, contract_value]):
+                if not actual_end_date:
+                    actual_end_date = datetime.now().date()
+                
+                planned_duration = (scheduled_end_date - start_date).days
+                actual_duration = (actual_end_date - start_date).days
+                delay_days = max(0, actual_duration - planned_duration)
+                
+                penalty_amount = min(
+                    contract_value * (penalty_rate / 100) * delay_days / 100,
+                    contract_value * 0.10
+                )
+                
+                if delay_days > 0:
+                    st.warning(f"⚠️ Project delayed by {delay_days} days!")
+                else:
+                    st.success("✅ Project on schedule!")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("📅 Planned", f"{planned_duration} days")
+                with col2:
+                    st.metric("📅 Actual", f"{actual_duration} days")
+                with col3:
+                    st.metric("⏰ Delay", f"{delay_days} days")
+                with col4:
+                    st.metric("💸 Penalty", f"₹{penalty_amount:,.2f}")
+                
             else:
-                st.success("✅ Project on schedule!")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("📅 Planned", f"{planned_duration} days")
-            with col2:
-                st.metric("📅 Actual", f"{actual_duration} days")
-            with col3:
-                st.metric("⏰ Delay", f"{delay_days} days")
-            with col4:
-                st.metric("💸 Penalty", f"₹{penalty_amount:,.2f}")
-            
-        else:
-            st.error("❌ Please fill all fields.")
-```
+                st.error("❌ Please fill all fields.")
 
 def show_deductions_tool():
-st.header(“📊 Deductions Calculator”)
+    st.header("📊 Deductions Calculator")
 
-```
-with st.form("deductions_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        bill_amount = st.number_input("Bill Amount (₹)*", min_value=0.0, step=1000.0)
-        contractor_name = st.text_input("Contractor Name*")
-    
-    with col2:
-        work_description = st.text_area("Work Description*")
-    
-    st.subheader("🔢 Deduction Rates")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        tds_rate = st.number_input("TDS Rate (%)", value=2.0, step=0.1)
-    with col2:
-        security_rate = st.number_input("Security (%)", value=10.0, step=0.5)
-    with col3:
-        labour_cess = st.number_input("Labour Cess (₹)", step=100.0)
-    with col4:
-        other_deductions = st.number_input("Other (₹)", step=100.0)
-    
-    if st.form_submit_button("🧮 Calculate", use_container_width=True):
-        if all([bill_amount, contractor_name, work_description]):
-            tds_amount = bill_amount * (tds_rate / 100)
-            security_amount = bill_amount * (security_rate / 100)
-            total_deductions = tds_amount + security_amount + labour_cess + other_deductions
-            net_payable = bill_amount - total_deductions
-            
-            st.subheader("💰 Calculation Results")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("💰 Bill Amount", f"₹{bill_amount:,.2f}")
-            with col2:
-                st.metric("💸 Total Deductions", f"₹{total_deductions:,.2f}")
-            with col3:
-                st.metric("✅ Net Payable", f"₹{net_payable:,.2f}")
-            
-            # Breakdown
-            breakdown_data = {
-                'Deduction': ['TDS', 'Security', 'Labour Cess', 'Other'],
-                'Amount': [tds_amount, security_amount, labour_cess, other_deductions],
-                'Rate': [f"{tds_rate}%", f"{security_rate}%", "Fixed", "Fixed"]
-            }
-            
-            breakdown_df = pd.DataFrame(breakdown_data)
-            st.dataframe(breakdown_df, use_container_width=True)
-            
-            # Pie chart
-            if total_deductions > 0:
-                fig = px.pie(
-                    values=[net_payable, total_deductions], 
-                    names=['Net Payable', 'Deductions'],
-                    title="Bill Amount Distribution"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-        else:
-            st.error("❌ Please fill all required fields.")
-```
+    with st.form("deductions_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            bill_amount = st.number_input("Bill Amount (₹)*", min_value=0.0, step=1000.0)
+            contractor_name = st.text_input("Contractor Name*")
+        
+        with col2:
+            work_description = st.text_area("Work Description*")
+        
+        st.subheader("🔢 Deduction Rates")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            tds_rate = st.number_input("TDS Rate (%)", value=2.0, step=0.1)
+        with col2:
+            security_rate = st.number_input("Security (%)", value=10.0, step=0.5)
+        with col3:
+            labour_cess = st.number_input("Labour Cess (₹)", step=100.0)
+        with col4:
+            other_deductions = st.number_input("Other (₹)", step=100.0)
+        
+        if st.form_submit_button("🧮 Calculate", use_container_width=True):
+            if all([bill_amount, contractor_name, work_description]):
+                tds_amount = bill_amount * (tds_rate / 100)
+                security_amount = bill_amount * (security_rate / 100)
+                total_deductions = tds_amount + security_amount + labour_cess + other_deductions
+                net_payable = bill_amount - total_deductions
+                
+                st.subheader("💰 Calculation Results")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("💰 Bill Amount", f"₹{bill_amount:,.2f}")
+                with col2:
+                    st.metric("💸 Total Deductions", f"₹{total_deductions:,.2f}")
+                with col3:
+                    st.metric("✅ Net Payable", f"₹{net_payable:,.2f}")
+                
+                # Breakdown
+                breakdown_data = {
+                    'Deduction': ['TDS', 'Security', 'Labour Cess', 'Other'],
+                    'Amount': [tds_amount, security_amount, labour_cess, other_deductions],
+                    'Rate': [f"{tds_rate}%", f"{security_rate}%", "Fixed", "Fixed"]
+                }
+                
+                breakdown_df = pd.DataFrame(breakdown_data)
+                st.dataframe(breakdown_df, use_container_width=True)
+                
+                # Pie chart
+                if total_deductions > 0:
+                    fig = px.pie(
+                        values=[net_payable, total_deductions], 
+                        names=['Net Payable', 'Deductions'],
+                        title="Bill Amount Distribution"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+            else:
+                st.error("❌ Please fill all required fields.")
 
 def show_reports_tool():
-st.header(“📈 Reports & Analytics”)
+    st.header("📈 Reports & Analytics")
 
-```
-tab1, tab2, tab3 = st.tabs(["📊 Bills Summary", "💰 EMD Analysis", "⏰ Project Status"])
+    tab1, tab2, tab3 = st.tabs(["📊 Bills Summary", "💰 EMD Analysis", "⏰ Project Status"])
 
-with tab1:
-    st.subheader("Bills Overview")
-    bills_df = pd.read_sql_query("SELECT * FROM bills", db)
-    
-    if not bills_df.empty:
-        st.metric("Total Bills", len(bills_df), f"₹{bills_df['bill_amount'].sum():,.2f}")
+    with tab1:
+        st.subheader("Bills Overview")
+        bills_df = pd.read_sql_query("SELECT * FROM bills", db)
         
-        # Bills by month
-        bills_df['month'] = pd.to_datetime(bills_df['created_date']).dt.to_period('M')
-        monthly_bills = bills_df.groupby('month')['bill_amount'].sum().reset_index()
-        monthly_bills['month'] = monthly_bills['month'].astype(str)
-        
-        fig = px.bar(monthly_bills, x='month', y='bill_amount', title="Monthly Bills Amount")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(bills_df, use_container_width=True)
-    else:
-        st.info("No bills data available")
+        if not bills_df.empty:
+            st.metric("Total Bills", len(bills_df), f"₹{bills_df['bill_amount'].sum():,.2f}")
+            
+            # Bills by month
+            bills_df['month'] = pd.to_datetime(bills_df['created_date']).dt.to_period('M')
+            monthly_bills = bills_df.groupby('month')['bill_amount'].sum().reset_index()
+            monthly_bills['month'] = monthly_bills['month'].astype(str)
+            
+            fig = px.bar(monthly_bills, x='month', y='bill_amount', title="Monthly Bills Amount")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.dataframe(bills_df, use_container_width=True)
+        else:
+            st.info("No bills data available")
 
-with tab2:
-    st.subheader("EMD Refunds Analysis")
-    emd_df = pd.read_sql_query("SELECT * FROM emd_refunds", db)
-    
-    if not emd_df.empty:
-        col1, col2 = st.columns(2)
+    with tab2:
+        st.subheader("EMD Refunds Analysis")
+        emd_df = pd.read_sql_query("SELECT * FROM emd_refunds", db)
         
-        with col1:
-            st.metric("Total EMD Records", len(emd_df))
-            st.metric("Total Refund Amount", f"₹{emd_df['refund_amount'].sum():,.2f}")
-        
-        with col2:
-            st.metric("Total Penalty", f"₹{emd_df['penalty_amount'].sum():,.2f}")
-            eligible_count = len(emd_df[emd_df['status'] == 'Full Refund Eligible'])
-            st.metric("Full Refund Eligible", eligible_count)
-        
-        # Status distribution
-        status_counts = emd_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, title="EMD Refund Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(emd_df, use_container_width=True)
-    else:
-        st.info("No EMD data available")
+        if not emd_df.empty:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("Total EMD Records", len(emd_df))
+                st.metric("Total Refund Amount", f"₹{emd_df['refund_amount'].sum():,.2f}")
+            
+            with col2:
+                st.metric("Total Penalty", f"₹{emd_df['penalty_amount'].sum():,.2f}")
+                eligible_count = len(emd_df[emd_df['status'] == 'Full Refund Eligible'])
+                st.metric("Full Refund Eligible", eligible_count)
+            
+            # Status distribution
+            status_counts = emd_df['status'].value_counts()
+            fig = px.pie(values=status_counts.values, names=status_counts.index, title="EMD Refund Status Distribution")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.dataframe(emd_df, use_container_width=True)
+        else:
+            st.info("No EMD data available")
 
-with tab3:
-    st.subheader("Project Delays Analysis")
-    delays_df = pd.read_sql_query("SELECT * FROM project_delays", db)
-    
-    if not delays_df.empty:
-        col1, col2 = st.columns(2)
+    with tab3:
+        st.subheader("Project Delays Analysis")
+        delays_df = pd.read_sql_query("SELECT * FROM project_delays", db)
         
-        with col1:
-            st.metric("Total Projects", len(delays_df))
-            st.metric("Average Delay", f"{delays_df['delay_days'].mean():.1f} days")
-        
-        with col2:
-            st.metric("Total Penalty", f"₹{delays_df['penalty_amount'].sum():,.2f}")
-            delayed_projects = len(delays_df[delays_df['delay_days'] > 0])
-            st.metric("Delayed Projects", delayed_projects)
-        
-        # Delay distribution
-        fig = px.histogram(delays_df, x='delay_days', title="Project Delay Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(delays_df, use_container_width=True)
-    else:
-        st.info("No project delay data available")
-```
+        if not delays_df.empty:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("Total Projects", len(delays_df))
+                st.metric("Average Delay", f"{delays_df['delay_days'].mean():.1f} days")
+            
+            with col2:
+                st.metric("Total Penalty", f"₹{delays_df['penalty_amount'].sum():,.2f}")
+                delayed_projects = len(delays_df[delays_df['delay_days'] > 0])
+                st.metric("Delayed Projects", delayed_projects)
+            
+            # Delay distribution
+            fig = px.histogram(delays_df, x='delay_days', title="Project Delay Distribution")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.dataframe(delays_df, use_container_width=True)
+        else:
+            st.info("No project delay data available")
 
-if **name** == “**main**”:
-main()
+if __name__ == "__main__":
+    main()
