@@ -7,6 +7,7 @@ Streamlit Version for Web Deployment
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import sqlite3
 from datetime import datetime, timedelta
@@ -17,6 +18,18 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 import plotly.express as px
+import os
+import sys
+
+# Make PWD-Tools importable
+PWD_TOOLS_DIR = os.path.join(os.path.dirname(__file__), 'PWD-Tools')
+if os.path.isdir(PWD_TOOLS_DIR) and PWD_TOOLS_DIR not in sys.path:
+    sys.path.insert(0, PWD_TOOLS_DIR)
+
+try:
+    from utils.branding import apply_custom_css  # from PWD-Tools
+except Exception:
+    apply_custom_css = None
 
 # Page configuration
 st.set_page_config(
@@ -90,6 +103,9 @@ def generate_pdf(data):
     return buffer
 
 def main():
+    # Apply PWD-Tools branding if available
+    if callable(apply_custom_css):
+        apply_custom_css()
     st.markdown('<div class="main-header">🏛️ PWD Tools - Simplified</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Minimal Tools | Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur</div>', unsafe_allow_html=True)
 
@@ -132,6 +148,24 @@ def main():
 
     st.markdown('<div class="footer">PWD Tools Simplified v1.0</div>', unsafe_allow_html=True)
 
+def render_pwd_static_html(html_filename: str, height: int = 800, width: int = 1200):
+    """Render a static HTML tool from PWD-Tools/static/html with graceful fallback."""
+    static_path = os.path.join(PWD_TOOLS_DIR, 'static', 'html', html_filename)
+    if os.path.isfile(static_path):
+        try:
+            with open(static_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            col_left, col_center, col_right = st.columns([1, 10, 1])
+            with col_center:
+                components.html(html_content, height=height, width=width, scrolling=True)
+            return True
+        except Exception as e:
+            st.warning(f"Unable to load official PWD tool '{html_filename}': {e}")
+            return False
+    else:
+        st.info("Official PWD-Tools static HTML not found. Showing simplified fallback.")
+        return False
+
 def show_dashboard():
     st.header("Dashboard")
     col1, col2, col3 = st.columns(3)
@@ -163,35 +197,39 @@ def show_bill_note():
 
 def show_emd_refund():
     st.header("EMD Refund")
-    with st.form("emd"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=1000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            if payee and amount and work:
-                db.execute("INSERT INTO emd_refunds VALUES (NULL, ?, ?, ?, ?)", (payee, amount, work, datetime.now().strftime("%Y-%m-%d")))
-                db.commit()
-                st.metric("Refund", f"₹{amount:,.2f}")
+    # Prefer official tool if available
+    if not render_pwd_static_html('EmdRefund.html', height=600, width=1200):
+        with st.form("emd"):
+            payee = st.text_input("Payee Name")
+            amount = st.number_input("Amount", step=1000.0)
+            work = st.text_input("Work")
+            if st.form_submit_button("Calculate"):
+                if payee and amount and work:
+                    db.execute("INSERT INTO emd_refunds VALUES (NULL, ?, ?, ?, ?)", (payee, amount, work, datetime.now().strftime("%Y-%m-%d")))
+                    db.commit()
+                    st.metric("Refund", f"₹{amount:,.2f}")
 
 def show_security_refund():
     st.header("Security Refund")
-    with st.form("sec"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=1000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Check"):
-            if payee and amount and work:
-                st.success("Eligible")
+    if not render_pwd_static_html('SecurityRefund.html', height=800, width=1200):
+        with st.form("sec"):
+            payee = st.text_input("Payee Name")
+            amount = st.number_input("Amount", step=1000.0)
+            work = st.text_input("Work")
+            if st.form_submit_button("Check"):
+                if payee and amount and work:
+                    st.success("Eligible")
 
 def show_financial_progress():
     st.header("Financial Progress")
-    with st.form("progress"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Contract Amount", step=10000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            if payee and amount and work:
-                st.metric("Progress", "100%")
+    if not render_pwd_static_html('FinancialProgressTracker.html', height=800, width=1200):
+        with st.form("progress"):
+            payee = st.text_input("Payee Name")
+            amount = st.number_input("Contract Amount", step=10000.0)
+            work = st.text_input("Work")
+            if st.form_submit_button("Calculate"):
+                if payee and amount and work:
+                    st.metric("Progress", "100%")
 
 def show_delay_calc():
     st.header("Delay Calculator")
@@ -206,26 +244,30 @@ def show_delay_calc():
 
 def show_stamp_duty():
     st.header("Stamp Duty")
-    with st.form("stamp"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=1000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            duty = amount * 0.005
-            st.metric("Duty", f"₹{duty:,.2f}")
+    if not render_pwd_static_html('StampDuty.html', height=600, width=1200):
+        with st.form("stamp"):
+            payee = st.text_input("Payee Name")
+            amount = st.number_input("Amount", step=1000.0)
+            work = st.text_input("Work")
+            if st.form_submit_button("Calculate"):
+                duty = amount * 0.005
+                st.metric("Duty", f"₹{duty:,.2f}")
 
 def show_deductions():
     st.header("Deductions")
-    with st.form("ded"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=1000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            net = amount * 0.88
-            st.metric("Net", f"₹{net:,.2f}")
+    if not render_pwd_static_html('DeductionsTable.html', height=800, width=1200):
+        with st.form("ded"):
+            payee = st.text_input("Payee Name")
+            amount = st.number_input("Amount", step=1000.0)
+            work = st.text_input("Work")
+            if st.form_submit_button("Calculate"):
+                net = amount * 0.88
+                st.metric("Net", f"₹{net:,.2f}")
 
 def show_bill_deviation():
     st.header("Bill Deviation")
+    # Use official Bill Note static page if present as a related reference
+    showed = render_pwd_static_html('BillNoteSheet.html', height=800, width=1200)
     with st.form("dev"):
         payee = st.text_input("Payee Name")
         amount = st.number_input("Amount", step=1000.0)
