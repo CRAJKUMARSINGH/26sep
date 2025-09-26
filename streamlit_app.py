@@ -149,6 +149,9 @@ def main():
             transform: translateY(0);
             box-shadow: 0 3px 8px rgba(173,20,87,0.25);
         }
+        /* Magenta accents */
+        .pwd-badge { display:inline-block; padding:4px 10px; border-radius:10px; background:#fde4ef; color:#d81b60; font-weight:700; font-size:12px; }
+        .pwd-welcome { background: linear-gradient(135deg, #fff5fa 0%, #ffe6f1 100%); border-radius: 15px; padding: 16px; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -222,7 +225,7 @@ def tool_header(title: str, subtitle: str = ""):
     st.markdown(
         f"""
         <div class=\"pwd-welcome\" style=\"margin-bottom: 16px;\"> 
-            <h2 style=\"color: #2E8B57; margin-bottom: 6px;\">{title}</h2>
+            <h2 style=\"color: #d81b60; margin-bottom: 6px;\">{title}</h2>
             {f'<p style=\"color:#555;\">{subtitle}</p>' if subtitle else ''}
         </div>
         """,
