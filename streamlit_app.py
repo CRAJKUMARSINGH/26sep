@@ -24,9 +24,9 @@ import plotly.graph_objects as go
 # Page configuration
 
 st.set_page_config(
-page_title=“PWD Tools Suite”,
-page_icon=“🏛️”,
-layout=“wide”,
+page_title=“PWD Tools Suite”;
+page_icon=“🏛️”;
+layout=“wide”;
 initial_sidebar_state=“expanded”
 )
 
