@@ -126,6 +126,33 @@ def main():
     # Apply PWD-Tools branding if available (kept for broader theming)
     if callable(apply_custom_css):
         apply_custom_css()
+    # Enhanced global button styles (main + individual tools)
+    st.markdown(
+        """
+        <style>
+        .stButton > button, .stDownloadButton > button {
+            background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 700;
+            box-shadow: 0 6px 14px rgba(46,139,87,0.25);
+            transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+        }
+        .stButton > button:hover, .stDownloadButton > button:hover {
+            background: linear-gradient(135deg, #228B22 0%, #1a6f1a 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(34,139,34,0.30);
+        }
+        .stButton > button:active, .stDownloadButton > button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 8px rgba(34,139,34,0.20);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown('<div class="main-header">🏛️ PWD Tools - Simplified</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Minimal Tools | Initiative of Mrs. Premlata Jain, AAO, PWD Udaipur</div>', unsafe_allow_html=True)
 
