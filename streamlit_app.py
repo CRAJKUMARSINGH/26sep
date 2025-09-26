@@ -530,14 +530,23 @@ def show_emd_refund():
     # Prefer official tool if available
     if not render_pwd_static_html('EmdRefund.html', height=600, width=1200):
         with st.form("emd"):
-            payee = st.text_input("Payee Name")
-            amount = st.number_input("Amount", step=1000.0)
-            work = st.text_input("Work")
-            if st.form_submit_button("Calculate"):
-                if payee and amount and work:
-                    db.execute("INSERT INTO emd_refunds VALUES (NULL, ?, ?, ?, ?)", (payee, amount, work, datetime.now().strftime("%Y-%m-%d")))
+            contractor_name = st.text_input("Contractor Name")
+            emd_amount = st.number_input("Original EMD Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+            refund_percentage = st.slider("Refund Percentage", 0, 100, 100)
+            deduction_reason = st.text_input("Deduction Reason (optional)")
+            deduction_amount = st.number_input("Deduction Amount (₹)", min_value=0.0, step=100.0, format="%.2f")
+            submitted = st.form_submit_button("Calculate")
+            if submitted:
+                refund_amount = emd_amount * (refund_percentage / 100.0) - deduction_amount
+                refund_amount = max(0.0, refund_amount)
+                col1, col2, col3 = st.columns(3)
+                with col1: st.metric("Original EMD", f"₹{emd_amount:,.2f}")
+                with col2: st.metric("Deductions", f"₹{deduction_amount:,.2f}")
+                with col3: st.metric("Net Refund", f"₹{refund_amount:,.2f}")
+                # Save a simple record (optional minimal db)
+                if contractor_name and emd_amount:
+                    db.execute("INSERT INTO emd_refunds VALUES (NULL, ?, ?, ?, ?)", (contractor_name, emd_amount, deduction_reason or "", datetime.now().strftime("%Y-%m-%d")))
                     db.commit()
-                    st.metric("Refund", f"₹{amount:,.2f}")
 
 def show_security_refund():
     tool_header("🔒 Security Refund", "Compute refundable security amount")
