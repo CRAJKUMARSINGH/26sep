@@ -174,7 +174,12 @@ def main():
     elif selected_tool == "📈 Bill Deviation":
         show_bill_deviation()
 
-    st.markdown('<div class="footer">PWD Tools Simplified v1.0</div>', unsafe_allow_html=True)
+    # Footer styled like Genspark2 credits
+    st.markdown("---")
+    if callable(gs_show_credits):
+        gs_show_credits()
+    else:
+        st.markdown('<div class="footer">PWD Tools Simplified v1.0</div>', unsafe_allow_html=True)
 
 def render_pwd_static_html(html_filename: str, height: int = 800, width: int = 1200):
     """Render a static HTML tool from PWD-Tools/static/html with graceful fallback."""
