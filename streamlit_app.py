@@ -540,37 +540,50 @@ def show_emd_refund():
                     st.metric("Refund", f"₹{amount:,.2f}")
 
 def show_security_refund():
-    tool_header("🔒 Security Refund", "Eligibility and calculations")
+    tool_header("🔒 Security Refund", "Compute refundable security amount")
     if not render_pwd_static_html('SecurityRefund.html', height=800, width=1200):
         with st.form("sec"):
-            payee = st.text_input("Payee Name")
-            amount = st.number_input("Amount", step=1000.0)
-            work = st.text_input("Work")
-            if st.form_submit_button("Check"):
-                if payee and amount and work:
-                    st.success("Eligible")
+            contract_value = st.number_input("Contract Value (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            security_rate = st.number_input("Security Deposit %", min_value=0.0, max_value=100.0, value=5.0, step=0.1)
+            release_percent = st.slider("Release Percentage", 0, 100, 100)
+            submitted = st.form_submit_button("Calculate")
+            if submitted:
+                security_amount = contract_value * (security_rate / 100.0)
+                refundable = security_amount * (release_percent / 100.0)
+                col1, col2 = st.columns(2)
+                with col1: st.metric("Security Amount", f"₹{security_amount:,.2f}")
+                with col2: st.metric("Refundable Now", f"₹{refundable:,.2f}")
 
 def show_financial_progress():
-    tool_header("📈 Financial Progress", "Track project financials")
+    tool_header("📈 Financial Progress", "Track budget, expenditure, and balance")
     if not render_pwd_static_html('FinancialProgressTracker.html', height=800, width=1200):
         with st.form("progress"):
-            payee = st.text_input("Payee Name")
-            amount = st.number_input("Contract Amount", step=10000.0)
-            work = st.text_input("Work")
-            if st.form_submit_button("Calculate"):
-                if payee and amount and work:
-                    st.metric("Progress", "100%")
+            total_budget = st.number_input("Total Budget (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            expenditure = st.number_input("Expenditure to Date (₹)", min_value=0.0, step=10000.0, format="%.2f")
+            submitted = st.form_submit_button("Calculate")
+            if submitted:
+                balance = max(0.0, total_budget - expenditure)
+                progress = 0.0
+                if total_budget > 0:
+                    progress = min(100.0, (expenditure / total_budget) * 100.0)
+                col1, col2, col3 = st.columns(3)
+                with col1: st.metric("Budget", f"₹{total_budget:,.2f}")
+                with col2: st.metric("Expenditure", f"₹{expenditure:,.2f}")
+                with col3: st.metric("Balance", f"₹{balance:,.2f}")
+                st.metric("Progress", f"{progress:.2f}%")
 
 def show_delay_calc():
-    tool_header("⏰ Delay Calculator", "Delay days and penalty")
+    tool_header("⏰ Delay Calculator", "Compute delay days and penalty amount")
     with st.form("delay"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=10000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            if payee and amount and work:
-                st.metric("Delay Days", 0)
-                st.metric("Penalty", "₹0.00")
+        planned_days = st.number_input("Planned Duration (days)", min_value=0, step=1)
+        actual_days = st.number_input("Actual Duration (days)", min_value=0, step=1)
+        penalty_per_day = st.number_input("Penalty per Day (₹)", min_value=0.0, step=100.0, format="%.2f")
+        submitted = st.form_submit_button("Calculate")
+        if submitted:
+            delay_days = max(0, int(actual_days) - int(planned_days))
+            penalty = delay_days * float(penalty_per_day)
+            st.metric("Delay Days", delay_days)
+            st.metric("Penalty", f"₹{penalty:,.2f}")
 
 def show_stamp_duty():
     tool_header("🏛️ Stamp Duty", "Document stamp duty calculator")
@@ -584,27 +597,37 @@ def show_stamp_duty():
                 st.metric("Duty", f"₹{duty:,.2f}")
 
 def show_deductions():
-    tool_header("📊 Deductions", "Net payable after deductions")
+    tool_header("📊 Deductions", "Compute deductions and net payable")
     if not render_pwd_static_html('DeductionsTable.html', height=800, width=1200):
         with st.form("ded"):
-            payee = st.text_input("Payee Name")
-            amount = st.number_input("Amount", step=1000.0)
-            work = st.text_input("Work")
-            if st.form_submit_button("Calculate"):
-                net = amount * 0.88
-                st.metric("Net", f"₹{net:,.2f}")
+            gross_amount = st.number_input("Gross Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+            tds_rate = st.number_input("Income Tax (TDS) %", min_value=0.0, max_value=100.0, value=2.0, step=0.1)
+            security_rate = st.number_input("Security Deposit %", min_value=0.0, max_value=100.0, value=5.0, step=0.1)
+            other_deductions = st.number_input("Other Deductions (₹)", min_value=0.0, step=100.0, format="%.2f")
+            submitted = st.form_submit_button("Calculate")
+            if submitted:
+                tds = gross_amount * (tds_rate / 100.0)
+                security = gross_amount * (security_rate / 100.0)
+                total_deductions = tds + security + other_deductions
+                net = max(0.0, gross_amount - total_deductions)
+                colx, coly, colz, coln = st.columns(4)
+                with colx: st.metric("TDS", f"₹{tds:,.2f}")
+                with coly: st.metric("Security", f"₹{security:,.2f}")
+                with colz: st.metric("Other", f"₹{other_deductions:,.2f}")
+                with coln: st.metric("Net Payable", f"₹{net:,.2f}")
 
 def show_bill_deviation():
-    tool_header("📈 Bill Deviation", "Deviation calculator")
-    # Use official Bill Note static page if present as a related reference
-    showed = render_pwd_static_html('BillNoteSheet.html', height=800, width=1200)
-    with st.form("dev"):
-        payee = st.text_input("Payee Name")
-        amount = st.number_input("Amount", step=1000.0)
-        work = st.text_input("Work")
-        if st.form_submit_button("Calculate"):
-            revised = amount * 1.05
-            st.metric("Revised", f"₹{revised:,.2f}")
+    tool_header("📈 Bill Deviation", "Compute deviation between original and revised amounts")
+    with st.form("bill_dev"):
+        original_amount = st.number_input("Original Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+        revised_amount = st.number_input("Revised Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+        submitted = st.form_submit_button("Calculate")
+        if submitted:
+            deviation_pct = 0.0
+            if original_amount > 0:
+                deviation_pct = ((revised_amount - original_amount) / original_amount) * 100.0
+            st.metric("Revised Amount", f"₹{revised_amount:,.2f}")
+            st.metric("Deviation", f"{deviation_pct:.2f}%")
 
 if __name__ == "__main__":
     main()
