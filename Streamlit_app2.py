@@ -2,11 +2,11 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import numpy as np
+
 from datetime import datetime, date
 import base64
 from io import BytesIO
-import json
+
 from num2words import num2words
 
 # Page configuration
