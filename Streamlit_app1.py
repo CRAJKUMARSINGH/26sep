@@ -1089,5 +1089,5 @@ def show_performance_metrics():
 
     st.markdown(create_download_link(df_kpi, "performance_metrics.csv", "csv"), 
               unsafe_allow_html=True)
-            if __name__ == "__main__":
+    if __name__ == "__main__":
     main()
